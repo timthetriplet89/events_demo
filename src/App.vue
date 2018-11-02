@@ -5,7 +5,7 @@
     <!-- <input type="radio" v-model="pick" v-bind:value="a"> -->
 
     <!-- Select filter -->
-    <div>
+    <div class="input">
       <!-- <form @submit.prevent="changeFilter"> -->
         <select v-on:change="changeFilter" v-model="filterSelection">
           <option disabled value="">Select Filter</option>
@@ -23,8 +23,9 @@
       <div class="events" > 
         <div class="card" v-for="(event, eventIndex) in eventData" :key="eventIndex">
           <h4>{{ event.title }}</h4>
-          <p>{{ event.date }}</p>
-          <p>{{ event.category }}</p>
+          <p>{{ event.content }}</p>
+          <p>{{ event.category }}</p>          
+          <p>{{ event.pubDate }}</p>
         </div>
       </div>
     </div>
@@ -44,8 +45,14 @@
       <!-- <form @submit.prevent="filterByCategory"> -->
       <select v-on:change="filterByCategory" v-model="categorySelection">
             <option disabled value=""></option>
-            <option value="academic">academic</option>
-            <option value="social">social</option>
+            <option value="Activities/Service">Service</option>
+            <option value="Activities/Sports">Sports</option>
+            <option value="Activities/Talent">Talent</option>
+            <option value="Activities/Fitness">Fitness</option>
+            <option value="Activities/Social">Social</option>
+            <option value="Activities/Outdoor">Outdoor</option>
+            <option value="Activities/Wellness">Wellness</option>
+            <option value="Activities/Life Skills">Life Skills</option>
       </select>      
         <!-- <button type="submit">Submit</button> -->
       <!-- </form> -->
@@ -54,24 +61,27 @@
       <div class="events">  <!-- v-show="action === 'home'" -->
         <div class="card" v-for="(event, eventIndex) in eventsFilteredCategory" :key="eventIndex">
           <h4>{{ event.title }}</h4>
-          <p>{{ event.date }}</p>
-          <p>{{ event.category }}</p>
+          <p>{{ event.content }}</p>
+          <p>{{ event.category }}</p>          
+          <p>{{ event.pubDate }}</p>
         </div>  
       </div>   
     </div>
 
-    <div v-show="action === 'search'">
+    <div class="input" v-show="action === 'search'">
       <!-- search filter input  -->
       <form @submit.prevent="filterBySearch">
         <input placeholder="keyword" v-model="search.keyword"/>
         <button type="submit">Search</button>  <!-- @click="filterBySearch()" -->
       </form> 
+
       <!-- display search results -->
       <div class="events">  <!-- v-show="action === 'home'" --> 
         <div class="card" v-for="(event, eventIndex) in eventsFilteredSearch" :key="eventIndex"> 
-          <h4>{{ event.title }}</h4> 
-          <p>{{ event.date }}</p> 
-          <p>{{ event.category }}</p> 
+          <h4>{{ event.title }}</h4>
+          <p>{{ event.content }}</p>
+          <p>{{ event.category }}</p>          
+          <p>{{ event.pubDate }}</p>
         </div>  
       </div>    
     </div>
@@ -81,24 +91,17 @@
   </div>
 </template>
 
-<!-- <script src="https://unpkg.com/vue"></script>
- <script src="https://unpkg.com/vuejs-datepicker"></script> -->
-
 <script>
   import Datepicker from 'vuejs-datepicker';
+  const rssAPI = 'https://wt-c2bde7d7dfc8623f121b0eb5a7102930-0.sandbox.auth0-extend.com/getRss?url=';
+  const colors = ["indigo","blue","cyan","light-blue","teal","light-green","blue-grey"];
 
   export default {
     data () {
       return {
         action: 'all',
-        eventData: [
-          {title: 'Department Orientation', date: 'Thursday', category: 'academic'},
-          {title: 'Dance', date: 'Friday', category: 'social'},
-          {title: 'workshop', date: 'Tuesday', category: 'academic'},
-          {title: 'performance', date: 'Saturday', category: 'social'}
-        ],
+        eventData: [],
         filterSelection: '',
-        
         dateSelection: '',
         categorySelection: '',
         search: {
@@ -106,9 +109,24 @@
         },
         eventsFilteredDate: [],
         eventsFilteredCategory: [],
-        eventsFilteredSearch: []
+        eventsFilteredSearch: [],
+        msg: 'Welcome to Your Vue.js App',
+        noArray: [],
+        drawer:true,
+			  showIntro:false,
+			  addFeedDialog:false,
+			  addURL: 'https://calendar.byui.edu/RSSFeeds.aspx?data=FBqjK%2fSDoNoXjLLIGz5Kea2SyIk%2bK80m9T8RR%2bZnYumBTZxQgj8tnUyxXbSmZzvpAtLMsRTG%2bPcnabTM4oKMbg%3d%3d',
+			  urlError:false,
+			  urlRules:[],
+			  feeds:[],
+			  selectedFeed:null
       } 
-    },
+    }, 
+    created() {
+		  // do single file components use the created hook?  
+		  // what is 'this', at this point in the code?
+		  this.loadData();
+	  },
     methods: { 
       changeFilter() { 
         this.action = this.filterSelection; 
@@ -119,11 +137,14 @@
         // console.log(this.dateSelection);
       }, 
       filterByCategory() {
+        console.log("filterByCategory called");
+        console.log(this.categorySelection);  
         this.action = 'category';
         this.eventsFilteredCategory = [];
         for(var event of this.eventData) {
-          if (event.category === this.categorySelection) {
-            this.eventsFilteredCategory.push({title: event.title, date: event.date, category: event.category});
+          //console.log(event.categories[0]);
+          if (event.categories[0] === this.categorySelection) {
+            this.eventsFilteredCategory.push({title: event.title, content: event.content, category: event.categories[0], pubDate: event.pubDate });
           }
         }
       },
@@ -138,10 +159,10 @@
         if (nKeyword !== '') {
           // find relevant events
           for (var event of this.eventData) {
-            eventText = event.title + ' ' + event.date + ' ' + event.category;
+            eventText = event.title + ' ' + event.pubDate + ' ' + event.content;
             // add way tosearch all event fields
             if (eventText.toUpperCase().includes(nKeyword.toUpperCase())) {
-              this.eventsFilteredSearch.push({title: event.title, date: event.date, category: event.category});
+              this.eventsFilteredSearch.push({title: event.title, content: event.content, category: event.category, pubDate: event.pubDate });
             }
           }
         }
@@ -154,7 +175,49 @@
 
         // display relevant events
 
-      }
+      },
+      loadData() {
+			  this.urlError = false;
+			  this.urlRules = [];
+			  // code purposely left out from tutorial 
+
+        fetch(rssAPI+encodeURIComponent(this.addURL)) 
+        .then(res => res.json())
+				.then(res => {
+					// ok for now, assume no error, cuz awesome
+					this.addURL = '';
+
+					//assign a color first
+					res.feed.color = colors[this.feeds.length % (colors.length-1)];
+
+					// ok, add the items (but we append the url as a fk so we can filter later)
+					res.feed.items.forEach(item => {
+						item.feedPk = this.addURL;
+            item.feedColor = res.feed.color;
+            //console.log(item);
+						this.eventData.push(item);
+					});
+
+					// delete items
+					delete res.feed.items;
+
+					// add the original rss link
+					res.feed.rsslink = this.addURL;
+
+					this.feeds.push(res.feed);
+					this.addFeedDialog = false;
+
+					//always hide intro
+					this.showIntro = false;
+
+					//persist the feed, but not the items
+					this.storeFeeds();
+				});
+      },
+      storeFeeds() {
+			  console.log('calling storeFeeds');
+			  localStorage.setItem('feeds', JSON.stringify(this.feeds));
+		  }
     }, 
     components: {
       Datepicker
@@ -163,6 +226,14 @@
 </script>
       
 <style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
 * {
   text-align: center;
 }
@@ -177,6 +248,15 @@
   padding: 14px;
   box-shadow: 0px 0px 2px grey;
   margin: 1rem auto;
+  border-style: solid;
+}
+
+.input {
+  margin: 28px
+}
+
+.input {
+  margin: 28px
 }
 
 .dataFilter {
